@@ -15,7 +15,7 @@ func main() {
 	cfg := config{
 		addr: ":8080",
 		db: dbConfig{
-			dsn: env.GetString("GOOSE_DBSTRING", "host=localhost user=ecom password=ecom dbname=ecom  sslmode=disable"),
+			dsn: env.GetString("GOOSE_DBSTRING", "host=localhost port=5432 user=ecom password=ecom dbname=ecom sslmode=disable"),
 		},
 	}
 
@@ -37,6 +37,7 @@ func main() {
 
 	api := application{
 		config: cfg,
+		db:     conn,
 	}
 
 	if err := api.run(api.mount()); err != nil {

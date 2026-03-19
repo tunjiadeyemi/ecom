@@ -7,11 +7,14 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/jackc/pgx/v5"
+	repo "github.com/tunjiadeyemi/ecom/internal/adapters/postgresql/sqlc"
 	"github.com/tunjiadeyemi/ecom/internal/products"
 )
 
 type application struct {
 	config config
+	db     *pgx.Conn
 	// logger
 	// db driver
 }
@@ -26,6 +29,10 @@ type dbConfig struct {
 
 // mount
 func (app *application) mount() http.Handler {
+	if app.db == nil {
+		panic("application db is nil")
+	}
+
 	r := chi.NewRouter()
 
 	// A good base middleware stack
@@ -43,7 +50,7 @@ func (app *application) mount() http.Handler {
 		w.Write([]byte("All good "))
 	})
 
-	productService := products.NewService()
+	productService := products.NewService(repo.New(app.db))
 	productHandler := products.NewHandler(productService)
 	r.Get("/products", productHandler.ListProducts)
 
