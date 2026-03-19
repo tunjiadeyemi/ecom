@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/tunjiadeyemi/ecom/internal/products"
 )
 
 type application struct {
@@ -41,6 +42,9 @@ func (app *application) mount() http.Handler {
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("All good "))
 	})
+
+	productHandler := products.NewHandler(nil)
+	r.Get("/products", productHandler.ListProducts)
 
 	return r
 }
