@@ -1,6 +1,11 @@
 package products
 
-import "net/http"
+import (
+	"log"
+	"net/http"
+
+	"github.com/tunjiadeyemi/ecom/internal/json"
+)
 
 type handler struct {
 	service Service
@@ -13,6 +18,17 @@ func NewHandler(service Service) *handler {
 }
 
 func (h *handler) ListProducts(w http.ResponseWriter, r *http.Request) {
-	// -- call service to list products
-	// -- return json
+	err := h.service.ListProducts(r.Context())
+
+	if err != nil {
+		log.Panicln(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	products := struct {
+		Products []string `json:"products"`
+	}{}
+
+	json.Write(w, http.StatusOK, products)
 }
