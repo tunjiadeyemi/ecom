@@ -1,18 +1,22 @@
 package main
 
 import (
+	"context"
 	"log/slog"
 	"os"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/tunjiadeyemi/ecom/internal/env"
 )
 
 func main() {
+	ctx := context.Background()
+
 	cfg := config{
 		addr: ":8080",
-		db:   dbConfig{},
-	}
-
-	api := application{
-		config: cfg,
+		db: dbConfig{
+			dsn: env.GetString("GOOSE_DBSTRING", "host=localhost user=ecom password=ecom dbname=ecom  sslmode=disable"),
+		},
 	}
 
 	// logger
@@ -20,6 +24,20 @@ func main() {
 
 	// structured logger
 	slog.SetDefault(logger)
+
+	// db connection
+	conn, err := pgx.Connect(ctx, cfg.db.dsn)
+	if err != nil {
+		panic(err)
+	}
+
+	defer conn.Close(ctx)
+
+	logger.Info("connected to database", "dsn", cfg.db.dsn)
+
+	api := application{
+		config: cfg,
+	}
 
 	if err := api.run(api.mount()); err != nil {
 		slog.Error("server failed to start", "error", err)

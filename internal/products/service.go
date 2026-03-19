@@ -14,4 +14,7 @@ func NewService() Service {
 	return &svc{}
 }
 
-func (s *svc) ListProducts(ctx context.Context) error
+func (s *svc) ListProducts(ctx context.Context) error {
+	_ = ctx
+	return nil
+}
