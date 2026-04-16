@@ -1,0 +1,89 @@
+package orders
+
+import (
+	"context"
+	"errors"
+	"fmt"
+
+	"github.com/jackc/pgx/v5"
+	repo "github.com/tunjiadeyemi/ecom/internal/adapters/postgresql/sqlc"
+)
+
+var (
+	ErrProductNotFound = errors.New("Product not found")
+	ErrProductNoStock  = errors.New("Product not available")
+)
+
+type svc struct {
+	repo *repo.Queries
+	db   *pgx.Conn
+}
+
+func NewService(repo *repo.Queries, db *pgx.Conn) Service {
+	return &svc{
+		repo: repo,
+		db:   db,
+	}
+}
+
+func (s *svc) PlaceOrder(ctx context.Context, tempOrder createOrderParams) (repo.Order, error) {
+	// validate payload
+	if tempOrder.CustomerID == 0 {
+		return repo.Order{}, fmt.Errorf("customer ID is required")
+	}
+
+	if len(tempOrder.Items) == 0 {
+		return repo.Order{}, fmt.Errorf("at least one item is required")
+	}
+
+	tx, err := s.db.Begin(ctx)
+
+	if err != nil {
+		return repo.Order{}, err
+	}
+
+	// -- fail safe rollback
+	defer tx.Rollback(ctx)
+
+	qtx := s.repo.WithTx(tx)
+
+	// create order
+	order, err := qtx.CreateOrder(ctx, tempOrder.CustomerID)
+
+	if err != nil {
+		return repo.Order{}, err
+	}
+
+	// look for products if exists
+	for _, item := range tempOrder.Items {
+		product, err := qtx.FindProductByID(ctx, item.ProductID)
+
+		if err != nil {
+			return repo.Order{}, ErrProductNotFound
+		}
+
+		if product.Quantity < item.Quantity {
+			return repo.Order{}, ErrProductNoStock
+		}
+
+		// if exist, create order
+		_, err = qtx.CreateOrderItem(ctx, repo.CreateOrderItemParams{
+			OrderID:    order.ID,
+			ProductID:  item.ProductID,
+			Quantity:   item.Quantity,
+			PriceCents: product.PriceInCents,
+		})
+
+		if err != nil {
+			return repo.Order{}, err
+		}
+
+		// update the product stock quantity
+	}
+
+	// note: always close a transaction
+	tx.Commit(ctx)
+
+	return order, nil
+
+}

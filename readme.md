@@ -1,3 +1,7 @@
-run command: go run cmd/\*.go
+start up server command: `go run cmd/\*.go`
 
-migrations generation: sqlc generate
+to create a migration file: `goose -s create create_orders sql`
+
+to apply migration file (changes) to the db: `goose up`
+
+generate golang sql: `sqlc generate`
